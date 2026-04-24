@@ -19,6 +19,7 @@
     "copy-static": "turbo run copy-app-store-static",
     "copy-app-store-static": "node scripts/copy-app-store-static.js",
     "build": "next build && yarn sentry:release",
+    "vercel-build": "cd ../.. && yarn db-deploy && next build && yarn sentry:release",
     "start": "next start",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
