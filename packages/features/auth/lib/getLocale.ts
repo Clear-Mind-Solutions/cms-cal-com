@@ -3,7 +3,7 @@ import { lookup } from "bcp-47-match";
 import type { GetTokenParams } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 
-import { i18n } from "@calcom/i18n/next-i18next.config";
+import i18nConfig from "@calcom/i18n/next-i18next.config";
 
 type ReadonlyHeaders = Awaited<ReturnType<typeof import("next/headers").headers>>;
 type ReadonlyRequestCookies = Awaited<ReturnType<typeof import("next/headers").cookies>>;
@@ -57,5 +57,5 @@ export const getLocale = async (
 
   // use fallback to closest supported locale.
   // for instance, es-419 will be transformed to es
-  return lookup(i18n.locales, requestedLocale) ?? requestedLocale;
+  return lookup(i18nConfig.i18n.locales, requestedLocale) ?? requestedLocale;
 };
