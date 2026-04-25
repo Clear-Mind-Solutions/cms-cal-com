@@ -18,20 +18,52 @@ const connectionString = process.env.DATABASE_URL || process.env.CALCOM_DATABASE
 const sslConfig: false | { rejectUnauthorized: boolean } =
   process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false };
 
+/**
+ * Build a pg.Pool config from the connection string.
+ *
+ * pg-connection-string@2.9.1 silently swallows URL-parse errors and leaves
+ * `result` as undefined, causing a crash on `result.searchParams` (line 39).
+ * This happens when the password contains unencoded '#' or '?' characters —
+ * both terminate the URL path before the '@host' part, making both parse
+ * attempts in pg-connection-string fail.
+ *
+ * Fix: if the WHATWG URL parser rejects the connection string, fall back to a
+ * regex that reads the components directly (regex `.` matches '#' and '?'),
+ * and pass them as individual Pool options so pg never calls the URL parser.
+ */
+function buildPoolConfig(connStr: string): ConstructorParameters<typeof Pool>[0] {
+  if (!connStr) return {};
+  try {
+    // If Node's URL parser accepts the string, pg-connection-string will too.
+    new URL(connStr);
+    return { connectionString: connStr, ssl: sslConfig };
+  } catch {
+    // URL is malformed (e.g. unencoded '#' or '?' in the password).
+    // Use a regex that doesn't stop at fragment/query markers so the raw
+    // password (including '#' or '?') is captured correctly.
+    // The greedy (.+) backtracks to the last '@' that is followed by a
+    // valid host:port/database pattern, so passwords with '@' also work.
+    const m = connStr.match(/^(?:postgresql|postgres):\/\/([^:@]+):(.+)@([^:/]+):(\d+)\/([^?#\s]+)/);
+    if (m) {
+      const [, user, password, host, portStr, database] = m;
+      return { user, password, host, port: parseInt(portStr, 10), database, ssl: sslConfig };
+    }
+    // Last resort: pass as-is and let pg handle it.
+    return { connectionString: connStr, ssl: sslConfig };
+  }
+}
+
+const poolConfig = buildPoolConfig(connectionString);
+
 const pool =
   process.env.USE_POOL === "true" || process.env.USE_POOL === "1"
-    ? new Pool({
-        connectionString: connectionString,
-        max: 5,
-        idleTimeoutMillis: 300000,
-        ssl: sslConfig,
-      })
+    ? new Pool({ ...poolConfig, max: 5, idleTimeoutMillis: 300000 })
     : undefined;
 
 // PrismaPg v6 requires a pg.Pool instance — passing a plain config object silently
 // creates an adapter whose pool.connect() is undefined, crashing on first query.
 // Always construct a Pool (single connection by default) and hand it to PrismaPg.
-const pgPool = pool ?? new Pool({ connectionString, ssl: sslConfig });
+const pgPool = pool ?? new Pool(poolConfig);
 const adapter = new PrismaPg(pgPool);
 const prismaOptions: Prisma.PrismaClientOptions = {
   adapter,
