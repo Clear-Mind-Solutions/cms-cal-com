@@ -13,8 +13,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ error: "not found" });
   }
 
+  const dbUrl = process.env.DATABASE_URL ?? "";
   const info: Record<string, unknown> = {
-    DATABASE_URL_set: !!process.env.DATABASE_URL,
+    DATABASE_URL_set: !!dbUrl,
+    DATABASE_URL_protocol: dbUrl ? dbUrl.split(":")[0] : "(unset)",
+    DATABASE_URL_isURL: dbUrl.includes("://"),
+    DATABASE_URL_hasAtSign: (dbUrl.match(/@/g) ?? []).length,
+    DATABASE_URL_length: dbUrl.length,
+    DATABASE_URL_first20: dbUrl ? dbUrl.slice(0, 20) + "..." : "(unset)",
     CALCOM_DATABASE_URL_set: !!process.env.CALCOM_DATABASE_URL,
     DATABASE_SSL: process.env.DATABASE_SSL ?? "(unset)",
     USE_POOL: process.env.USE_POOL ?? "(unset)",
