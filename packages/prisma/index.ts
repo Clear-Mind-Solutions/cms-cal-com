@@ -7,7 +7,9 @@ import { excludeLockedUsersExtension } from "./extensions/exclude-locked-users";
 import { excludePendingPaymentsExtension } from "./extensions/exclude-pending-payment-teams";
 import { PrismaClient, type Prisma } from "./generated/prisma/client";
 
-const connectionString = process.env.DATABASE_URL || "";
+// Fall back to CALCOM_DATABASE_URL if DATABASE_URL is not set directly in the environment.
+// Infisical stores the secret as CALCOM_DATABASE_URL; Vercel may expose it under either name.
+const connectionString = process.env.DATABASE_URL || process.env.CALCOM_DATABASE_URL || "";
 const pool =
   process.env.USE_POOL === "true" || process.env.USE_POOL === "1"
     ? new Pool({
