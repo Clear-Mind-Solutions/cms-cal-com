@@ -31,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: err.message,
       code: err.code,
       name: err.name,
+      stack: err.stack?.split("\n").slice(0, 12),
       ...info,
     });
   }
