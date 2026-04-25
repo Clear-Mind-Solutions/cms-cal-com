@@ -14,13 +14,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const dbUrl = process.env.DATABASE_URL ?? "";
+  let urlParseError: string | null = null;
+  let urlPasswordAnalysis: Record<string, unknown> = {};
+  if (dbUrl) {
+    try {
+      const parsed = new URL(dbUrl);
+      const pwd = parsed.password ?? "";
+      urlPasswordAnalysis = {
+        ok: true,
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        port: parsed.port,
+        passwordLength: pwd.length,
+        passwordHasHash: pwd.includes("#"),
+        passwordHasQuestion: pwd.includes("?"),
+        passwordHasAt: pwd.includes("@"),
+        passwordHasPercent: pwd.includes("%"),
+        passwordHasSpace: pwd.includes(" "),
+        // Show first 3 chars of decoded password (just to see type of char)
+        passwordDecodedFirst3: decodeURIComponent(pwd).slice(0, 3),
+      };
+    } catch (e: unknown) {
+      urlParseError = (e as Error).message;
+      urlPasswordAnalysis = { ok: false, parseError: urlParseError };
+    }
+  }
   const info: Record<string, unknown> = {
     DATABASE_URL_set: !!dbUrl,
-    DATABASE_URL_protocol: dbUrl ? dbUrl.split(":")[0] : "(unset)",
-    DATABASE_URL_isURL: dbUrl.includes("://"),
-    DATABASE_URL_hasAtSign: (dbUrl.match(/@/g) ?? []).length,
     DATABASE_URL_length: dbUrl.length,
-    DATABASE_URL_first20: dbUrl ? dbUrl.slice(0, 20) + "..." : "(unset)",
+    urlParsed: urlPasswordAnalysis,
     CALCOM_DATABASE_URL_set: !!process.env.CALCOM_DATABASE_URL,
     DATABASE_SSL: process.env.DATABASE_SSL ?? "(unset)",
     USE_POOL: process.env.USE_POOL ?? "(unset)",
