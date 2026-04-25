@@ -28,7 +28,11 @@ const pool =
       })
     : undefined;
 
-const adapter = pool ? new PrismaPg(pool) : new PrismaPg({ connectionString, ssl: sslConfig });
+// PrismaPg v6 requires a pg.Pool instance — passing a plain config object silently
+// creates an adapter whose pool.connect() is undefined, crashing on first query.
+// Always construct a Pool (single connection by default) and hand it to PrismaPg.
+const pgPool = pool ?? new Pool({ connectionString, ssl: sslConfig });
+const adapter = new PrismaPg(pgPool);
 const prismaOptions: Prisma.PrismaClientOptions = {
   adapter,
 };
