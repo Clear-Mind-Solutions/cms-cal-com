@@ -7,10 +7,9 @@ export async function isPrismaAvailableCheck(): Promise<boolean> {
     await prisma.$queryRaw<unknown[]>(Prisma.sql`SELECT 1`);
     await prisma.$disconnect();
     return true;
-  } catch (e: unknown) {
-    if (e instanceof Prisma.PrismaClientInitializationError) {
-      return false;
-    }
-    throw e;
+  } catch {
+    // Any error (PrismaClientInitializationError, URL parse error, network error, etc.)
+    // means Prisma is not available in this context — skip migrations.
+    return false;
   }
 }
