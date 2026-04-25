@@ -10,16 +10,25 @@ import { PrismaClient, type Prisma } from "./generated/prisma/client";
 // Fall back to CALCOM_DATABASE_URL if DATABASE_URL is not set directly in the environment.
 // Infisical stores the secret as CALCOM_DATABASE_URL; Vercel may expose it under either name.
 const connectionString = process.env.DATABASE_URL || process.env.CALCOM_DATABASE_URL || "";
+
+// Supabase (and most managed Postgres providers) require SSL for external connections.
+// pg does not enable SSL by default; passing rejectUnauthorized: false accepts the managed
+// TLS cert without requiring the CA bundle to be present in the serverless bundle.
+// Set DATABASE_SSL=false explicitly to disable (e.g. local docker-compose Postgres).
+const sslConfig: false | { rejectUnauthorized: boolean } =
+  process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false };
+
 const pool =
   process.env.USE_POOL === "true" || process.env.USE_POOL === "1"
     ? new Pool({
         connectionString: connectionString,
         max: 5,
         idleTimeoutMillis: 300000,
+        ssl: sslConfig,
       })
     : undefined;
 
-const adapter = pool ? new PrismaPg(pool) : new PrismaPg({ connectionString });
+const adapter = pool ? new PrismaPg(pool) : new PrismaPg({ connectionString, ssl: sslConfig });
 const prismaOptions: Prisma.PrismaClientOptions = {
   adapter,
 };
