@@ -3,7 +3,14 @@ import { lookup } from "bcp-47-match";
 import type { GetTokenParams } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 
-import { i18n } from "@calcom/i18n/next-i18next.config";
+// Use default import to avoid ESM named-import issue with CJS module.
+// Turbopack cannot statically extract named exports from `module.exports = variable`,
+// so `import { i18n }` resolves to undefined → TypeError: Cannot read properties
+// of undefined (reading 'locales') in every App Router request (global-error).
+// Same pattern as next.config.ts — works correctly.
+import nextI18nextConfig from "@calcom/i18n/next-i18next.config";
+
+const { i18n } = nextI18nextConfig;
 
 type ReadonlyHeaders = Awaited<ReturnType<typeof import("next/headers").headers>>;
 type ReadonlyRequestCookies = Awaited<ReturnType<typeof import("next/headers").cookies>>;
